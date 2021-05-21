@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:vibration/vibration.dart';
-
 
 // Main
-void main() => runApp(MaterialApp(home: QRViewPage()));
-
+void main() {
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: QRViewPage(),
+    ),
+  );
+}
 
 // Main page
 class QRViewPage extends StatefulWidget {
@@ -27,7 +31,20 @@ class _QRViewPageState extends State<QRViewPage> {
   double _zoomValue = 1.0;
   
   // Regex
-  RegExp smsFormat = RegExp("smsto");
+  final RegExp smsFormat = RegExp("smsto");
+
+  // Color settings
+  Color _backgroundColor = Colors.black;
+  Color _qrCodeBorderColor = Colors.white;
+  Color _slideActiveBarColor = Colors.white;
+  Color _slideDeactiveBarColor = Colors.grey;
+  Color _buttonUnclickedColor = Colors.black;
+  Color _buttonClickedColor = Colors.grey.shade800;
+  Color _buttonBorderColor = Colors.grey;
+  Color _iconUnclickedColor = Colors.white;
+  Color _iconClickedColor = Colors.black;
+  bool _flash = false;
+  bool _rotation = false;
 
   // In order to get hot reload to work we need to pause the camera if the platform
   // is android, or resume the camera if the platform is iOS.
@@ -42,6 +59,9 @@ class _QRViewPageState extends State<QRViewPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Hide status bar
+    SystemChrome.setEnabledSystemUIOverlays([]);
+
     return Scaffold(
       body: Column(
         children: <Widget>[
@@ -49,49 +69,85 @@ class _QRViewPageState extends State<QRViewPage> {
           Expanded(
             flex: 1,
             child: Container(
-              color: Colors.transparent,
-              // fit: BoxFit.contain,
+              color: _backgroundColor,
               child: Column(
                 children: <Widget>[
+                  SizedBox(
+                    height: 10.0,
+                  ),
                   Expanded(
                       flex: 1,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
-                          Container(
-                            child: CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.lightGreenAccent,
-                              child: IconButton(
-                                icon: Icon(Icons.lightbulb_outline),
-                                onPressed: () async {
-                                  await controller?.toggleFlash();
-                                  setState(() {
-                                    // Shock
-                                    Vibration.vibrate();
-                                  });
-                                },
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                              primary: _flash ? _buttonClickedColor : _buttonUnclickedColor,
+                              onPrimary: Colors.white,
+                              side: BorderSide(
+                                width: 1.0,
+                                color: _buttonBorderColor,
                               ),
                             ),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.green,
-                                width: 2.0,
+                            child: Icon(
+                              Icons.lightbulb_outline,
+                              color: _flash ? _iconClickedColor : _iconUnclickedColor,
+                            ),
+                            onPressed: () async {
+                              await controller?.toggleFlash();
+                              setState(() {
+                                _flash = !_flash;
+                              });
+                            },
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                              primary: _rotation ? _buttonClickedColor : _buttonUnclickedColor,
+                              onPrimary: Colors.white,
+                              side: BorderSide(
+                                width: 1.0,
+                                color: _buttonBorderColor,
                               ),
                             ),
-                          ),
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.lightGreenAccent,
-                            child: IconButton(
-                              icon: Icon(Icons.rotate_90_degrees_ccw),
-                              onPressed: () async {
-                                await controller?.flipCamera();
-                                setState(() {});
-                              },
+                            child: Icon(
+                              Icons.rotate_90_degrees_ccw,
+                              color: _rotation ? _iconClickedColor : _iconUnclickedColor,
                             ),
+                            onPressed: () async {
+                              await controller?.flipCamera();
+                              setState(() {
+                                _rotation = !_rotation;
+                              });
+                            },
                           ),
+                          // ElevatedButton(
+                          //   style: ElevatedButton.styleFrom(
+                          //     shape: RoundedRectangleBorder(
+                          //       borderRadius: BorderRadius.circular(30.0),
+                          //     ),
+                          //     primary: _buttonUnclickedColor,
+                          //     onPrimary: Colors.white,
+                          //     side: BorderSide(
+                          //       width: 1.0,
+                          //       color: _buttonBorderColor,
+                          //     ),
+                          //   ),
+                          //   child: Icon(
+                          //     Icons.info,
+                          //     color: _iconUnclickedColor,
+                          //   ),
+                          //   onPressed: () {
+                          //     setState(() async {
+                          //       showAlertDialog(context);
+                          //     });
+                          //   },
+                          // ),
                         ],
                       ),
                   ),
@@ -102,6 +158,8 @@ class _QRViewPageState extends State<QRViewPage> {
                         min: 0.1,
                         max: 2.0,
                         divisions: 6,
+                        activeColor: _slideActiveBarColor,
+                        inactiveColor: _slideDeactiveBarColor,
                         label: ((_zoomValue*10).toInt()/10).toDouble().toString(),
                         onChanged: (double value) {
                           setState(() {
@@ -131,7 +189,7 @@ class _QRViewPageState extends State<QRViewPage> {
       key: qrKey,
       onQRViewCreated: _onQRViewCreated,
       overlay: QrScannerOverlayShape(
-          borderColor: Colors.cyanAccent,
+          borderColor: _qrCodeBorderColor,
           borderRadius: 10,
           borderLength: 30,
           borderWidth: 10,
@@ -164,13 +222,92 @@ class _QRViewPageState extends State<QRViewPage> {
       }
     }
 
-    // Shock
-    HapticFeedback.vibrate();
-
     await canLaunch(openData)
         ? await launch(openData)
         : throw "Could not launch $openData";
   }
+
+
+  // Show AlertDialog
+  showAlertDialog(BuildContext context) {
+    // Init
+    AlertDialog dialog = AlertDialog(
+      title: Text(
+        "QR Code Scanner v1.0",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        "copyright © 2021 Clay.\nall rights reserved.\n\nMore information:\ngithub.com/ccs96307/Flutter-QRCode-Scanner",
+        style: TextStyle(
+          color: Colors.white,
+          // fontWeight: FontWeight.bold,
+        ),
+      ),
+      backgroundColor: Colors.grey[900],
+      shape: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16.0),
+      ),
+      actions: [
+        Center(
+          child: SizedBox(
+            width: double.infinity, // <-- match_parent
+            child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
+                  primary: Colors.grey[900],
+                  onPrimary: Colors.white,
+                  side: BorderSide(
+                    width: 1.0,
+                    color: Colors.grey,
+                  ),
+                ),
+
+                child: Text(
+                  "OK",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                }),
+          ),
+        ),
+      ],
+    );
+
+    // Show the dialog (showDialog() => showGeneralDialog())
+    showGeneralDialog(
+      barrierColor: Colors.black.withOpacity(0.6),
+      context: context,
+      pageBuilder: (context, anim1, anim2) {
+        return Wrap();
+      },
+      barrierDismissible: false,
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform(
+          transform: Matrix4.translationValues(
+            0.0,
+            (1.0 - Curves.ease.transform(anim1.value)) * 100,
+            0.0,
+          ),
+          child: Opacity(
+            opacity: Curves.easeInOutQuad.transform(anim1.value),
+            child: dialog,
+          ),
+        );
+      },
+      transitionDuration: Duration(milliseconds: 400),
+    );
+  }
+
+
 
   @override
   void dispose() {
